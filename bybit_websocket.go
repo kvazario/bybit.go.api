@@ -46,7 +46,10 @@ func (b *WebSocket) monitorConnection() {
 				fmt.Println("Reconnection failed:")
 			} else {
 				b.isConnected = true
-				go b.handleIncomingMessages() // Restart message handling
+				if _, err := b.SendSubscription(b.subscription); err != nil {
+					fmt.Println(err.Error())
+				}
+				//go b.handleIncomingMessages() // Restart message handling
 			}
 		}
 
@@ -73,6 +76,7 @@ type WebSocket struct {
 	ctx          context.Context
 	cancel       context.CancelFunc
 	isConnected  bool
+	subscription []string
 }
 
 type WebsocketOption func(*WebSocket)
@@ -143,6 +147,7 @@ func (b *WebSocket) Connect() *WebSocket {
 }
 
 func (b *WebSocket) SendSubscription(args []string) (*WebSocket, error) {
+	b.subscription = args
 	reqID := uuid.New().String()
 	subMessage := map[string]interface{}{
 		"req_id": reqID,
@@ -199,7 +204,7 @@ func ping(b *WebSocket) {
 				fmt.Println("Failed to send ping:", err)
 				return
 			}
-			fmt.Println("Ping sent with UTC time:", currentTime)
+			//fmt.Println("Ping sent with UTC time:", currentTime)
 
 		case <-b.ctx.Done():
 			fmt.Println("Ping context closed, stopping ping.")
