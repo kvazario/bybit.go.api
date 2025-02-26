@@ -45,11 +45,11 @@ func (b *WebSocket) monitorConnection() {
 			if con == nil {
 				fmt.Println("Reconnection failed:")
 			} else {
-				b.isConnected = true
+				fmt.Println("Reconnected")
 				if _, err := b.SendSubscription(b.subscription); err != nil {
 					fmt.Println(err.Error())
 				}
-				//go b.handleIncomingMessages() // Restart message handling
+				return
 			}
 		}
 
