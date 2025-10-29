@@ -14,6 +14,24 @@ import (
 )
 
 type MessageHandler func(message string) error
+type OnReconnect func() error
+
+type WebSocket struct {
+	conn         *websocket.Conn
+	url          string
+	apiKey       string
+	apiSecret    string
+	maxAliveTime string
+	pingInterval int
+	onMessage    MessageHandler
+	onReconnect  OnReconnect
+	ctx          context.Context
+	cancel       context.CancelFunc
+	isConnected  bool
+	subscription []string
+}
+
+type WebsocketOption func(*WebSocket)
 
 func (b *WebSocket) handleIncomingMessages() {
 	for {
@@ -34,6 +52,17 @@ func (b *WebSocket) handleIncomingMessages() {
 	}
 }
 
+func (b *WebSocket) onReConnect() error {
+	if b.onReconnect != nil {
+		err := b.onReconnect()
+		if err != nil {
+			log.Println("Error handling message:", err)
+			return err
+		}
+	}
+	return nil
+}
+
 func (b *WebSocket) monitorConnection() {
 	ticker := time.NewTicker(time.Second * 5) // Check every 5 seconds
 	defer ticker.Stop()
@@ -47,7 +76,11 @@ func (b *WebSocket) monitorConnection() {
 				log.Println("Reconnection failed:")
 			} else {
 				log.Println("Reconnected")
+
 				if _, err := b.SendSubscription(b.subscription); err != nil {
+					log.Println(err.Error())
+				}
+				if err := b.onReConnect(); err != nil {
 					log.Println(err.Error())
 				}
 				return
@@ -66,21 +99,9 @@ func (b *WebSocket) SetMessageHandler(handler MessageHandler) {
 	b.onMessage = handler
 }
 
-type WebSocket struct {
-	conn         *websocket.Conn
-	url          string
-	apiKey       string
-	apiSecret    string
-	maxAliveTime string
-	pingInterval int
-	onMessage    MessageHandler
-	ctx          context.Context
-	cancel       context.CancelFunc
-	isConnected  bool
-	subscription []string
+func (b *WebSocket) SetOnReconnectHandler(handler OnReconnect) {
+	b.onReconnect = handler
 }
-
-type WebsocketOption func(*WebSocket)
 
 func WithPingInterval(pingInterval int) WebsocketOption {
 	return func(c *WebSocket) {
