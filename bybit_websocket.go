@@ -144,6 +144,13 @@ func NewBybitPublicWebSocket(url string, handler MessageHandler) *WebSocket {
 }
 
 func (b *WebSocket) Connect() *WebSocket {
+	if b.cancel != nil {
+		b.cancel()
+	}
+	if b.conn != nil {
+		b.conn.Close()
+	}
+
 	var err error
 	wssUrl := b.url
 	if b.maxAliveTime != "" {
